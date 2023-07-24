@@ -3,107 +3,63 @@ package secrets
 import (
 	"context"
 
+	"github.com/databricks/databricks-sdk-go/service/workspace"
 	"github.com/databricks/terraform-provider-databricks/common"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// NewSecretAclsAPI creates SecretAclsAPI instance from provider meta
-func NewSecretAclsAPI(ctx context.Context, m any) SecretAclsAPI {
-	return SecretAclsAPI{m.(*common.DatabricksClient), ctx}
+type SecretAcl struct {
+	// The name of the scope to apply permissions to.
+	Scope string `json:"scope" tf:"force_new"`
+	// The principal in which the permission is applied.
+	Principal string `json:"principal" tf:"force_new"`
+	// The permission level applied to the principal.
+	Permission ACLPermission `json:"permission" tf:"force_new"`
 }
 
-// SecretAclsAPI exposes the Secret ACL API
-type SecretAclsAPI struct {
-	client  *common.DatabricksClient
-	context context.Context
-}
-
-// Create creates or overwrites the ACL associated with the given principal (user or group) on the specified scope point
-func (a SecretAclsAPI) Create(scope string, principal string, permission ACLPermission) error {
-	return a.client.Post(a.context, "/secrets/acls/put", SecretACLRequest{
-		Scope:      scope,
-		Principal:  principal,
-		Permission: permission,
-	}, nil)
-}
-
-// Delete deletes the given ACL on the given scope
-func (a SecretAclsAPI) Delete(scope string, principal string) error {
-	return a.client.Post(a.context, "/secrets/acls/delete", SecretACLRequest{
-		Scope:     scope,
-		Principal: principal,
-	}, nil)
-}
-
-// Read describe the details about the given ACL, such as the group and permission
-func (a SecretAclsAPI) Read(scope string, principal string) (ACLItem, error) {
-	var aclItem ACLItem
-	err := a.client.Get(a.context, "/secrets/acls/get", SecretACLRequest{
-		Scope:     scope,
-		Principal: principal,
-	}, &aclItem)
-	return aclItem, err
-}
-
-// List lists the ACLs set on the given scope
-func (a SecretAclsAPI) List(scope string) ([]ACLItem, error) {
-	var aclItem SecretScopeACL
-	err := a.client.Get(a.context, "/secrets/acls/list", map[string]string{
-		"scope": scope,
-	}, &aclItem)
-	return aclItem.Items, err
-}
-
-// ResourceSecretACL manages access to secret scopes
 func ResourceSecretACL() *schema.Resource {
+	s := common.StructToSchema(SecretAcl{},
+		func(m map[string]*schema.Schema) map[string]*schema.Schema {
+			m["scope"].ValidateFunc = validScope
+			return m
+		})
 	p := common.NewPairSeparatedID("scope", "principal", "|||")
 	return common.Resource{
-		Schema: map[string]*schema.Schema{
-			"scope": {
-				Type:         schema.TypeString,
-				ValidateFunc: validScope,
-				Required:     true,
-				ForceNew:     true,
-			},
-			"principal": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-			"permission": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
-			},
-		},
+		Schema: s,
 		Create: func(ctx context.Context, d *schema.ResourceData, c *common.DatabricksClient) error {
-			if err := NewSecretAclsAPI(ctx, c).Create(
-				d.Get("scope").(string), d.Get("principal").(string),
-				ACLPermission(d.Get("permission").(string))); err != nil {
+			w, err := c.WorkspaceClient()
+			if err != nil {
 				return err
 			}
-			// TODO: check what happens if ID is set before error happens in create
+			var putAcl workspace.PutAcl
+			common.DataToStructPointer(d, s, &putAcl)
+			if err := w.Secrets.PutAcl(ctx, putAcl); err != nil {
+				return err
+			}
 			p.Pack(d)
 			return nil
 		},
 		Read: func(ctx context.Context, d *schema.ResourceData, c *common.DatabricksClient) error {
-			scope, principal, err := p.Unpack(d)
+			w, err := c.WorkspaceClient()
 			if err != nil {
 				return err
 			}
-			secretACL, err := NewSecretAclsAPI(ctx, c).Read(scope, principal)
+			var getAclRequest workspace.GetAclRequest
+			common.DataToStructPointer(d, s, &getAclRequest)
+			v, err := w.Secrets.GetAcl(ctx, getAclRequest)
 			if err != nil {
 				return err
 			}
-			return d.Set("permission", secretACL.Permission)
+			return common.StructToData(v, s, d)
 		},
 		Delete: func(ctx context.Context, d *schema.ResourceData, c *common.DatabricksClient) error {
-			scope, principal, err := p.Unpack(d)
+			w, err := c.WorkspaceClient()
 			if err != nil {
 				return err
 			}
-			return NewSecretAclsAPI(ctx, c).Delete(scope, principal)
+			var deleteAcl workspace.DeleteAcl
+			common.DataToStructPointer(d, s, &deleteAcl)
+			return w.Secrets.DeleteAcl(ctx, deleteAcl)
 		},
 	}.ToResource()
 }
