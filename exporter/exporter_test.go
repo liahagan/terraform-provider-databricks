@@ -488,12 +488,12 @@ func TestImportingUsersGroupsSecretScopes(t *testing.T) {
 			},
 			{
 				Method:   "GET",
-				Resource: "/api/2.0/secrets/acls/get?principal=test&scope=a",
+				Resource: "/api/2.0/secrets/acls/get?principal=&scope=",
 				Response: secrets.ACLItem{Permission: "MANAGE", Principal: "test"},
 			},
 			{
 				Method:   "GET",
-				Resource: "/api/2.0/secrets/acls/get?principal=users&scope=a",
+				Resource: "/api/2.0/secrets/acls/get?principal=&scope=",
 				Response: secrets.ACLItem{Permission: "READ", Principal: "users"},
 			},
 			emptyWorkspace,
@@ -1230,7 +1230,7 @@ func TestImportingSecrets(t *testing.T) {
 			},
 			{
 				Method:       "GET",
-				Resource:     "/api/2.0/secrets/acls/get?principal=test%40test.com&scope=some-kv-scope",
+				Resource:     "/api/2.0/secrets/acls/get?principal=&scope=",
 				ReuseRequest: true,
 				Response:     getJSONObject("test-data/secret-scopes-get-principal-response.json"),
 			},
@@ -1736,7 +1736,7 @@ func TestImportingDLTPipelines(t *testing.T) {
 			},
 			{
 				Method:       "GET",
-				Resource:     "/api/2.0/secrets/acls/get?principal=test%40test.com&scope=some-kv-scope",
+				Resource:     "/api/2.0/secrets/acls/get?principal=&scope=",
 				ReuseRequest: true,
 				Response:     getJSONObject("test-data/secret-scopes-get-principal-response.json"),
 			},

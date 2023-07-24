@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/databricks/databricks-sdk-go"
-	"github.com/databricks/terraform-provider-databricks/secrets"
 
 	"github.com/databricks/terraform-provider-databricks/common"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -66,12 +65,15 @@ func TestAccSecretAclResourceDefaultPrincipal(t *testing.T) {
 		}`,
 		Check: resourceCheck("databricks_secret_scope.app",
 			func(ctx context.Context, client *common.DatabricksClient, id string) error {
-				secretACLAPI := secrets.NewSecretAclsAPI(ctx, client)
-				acls, err := secretACLAPI.List(id)
+				w, err := client.WorkspaceClient()
+				if err != nil {
+					return err
+				}
+				acls, err := w.Secrets.ListAclsByScope(ctx, id)
 				require.NoError(t, err)
-				assert.Equal(t, 1, len(acls))
-				assert.Equal(t, "users", acls[0].Principal)
-				assert.Equal(t, "READ", string(acls[0].Permission))
+				assert.Equal(t, 1, len(acls.Items))
+				assert.Equal(t, "users", acls.Items[0].Principal)
+				assert.Equal(t, "READ", string(acls.Items[0].Permission))
 				return nil
 			}),
 	})

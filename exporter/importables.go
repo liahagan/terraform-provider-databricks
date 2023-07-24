@@ -872,8 +872,12 @@ var resourcesMap map[string]importable = map[string]importable{
 					}
 				}
 			}
-			if l, err := secrets.NewSecretAclsAPI(ic.Context, ic.Client).List(r.ID); err == nil {
-				for _, acl := range l {
+			w, err := ic.Client.WorkspaceClient()
+			if err != nil {
+				return err
+			}
+			if l, err := w.Secrets.ListAclsByScope(ic.Context, r.ID); err == nil {
+				for _, acl := range l.Items {
 					ic.Emit(&resource{
 						Resource: "databricks_secret_acl",
 						ID:       fmt.Sprintf("%s|||%s", r.ID, acl.Principal),
