@@ -18,7 +18,8 @@ type SecretAcl struct {
 }
 
 func ResourceSecretACL() *schema.Resource {
-	s := common.StructToSchema(SecretAcl{},
+	s := common.StructToSchema(
+		SecretAcl{},
 		func(m map[string]*schema.Schema) map[string]*schema.Schema {
 			m["scope"].ValidateFunc = validScope
 			return m
@@ -40,17 +41,21 @@ func ResourceSecretACL() *schema.Resource {
 			return nil
 		},
 		Read: func(ctx context.Context, d *schema.ResourceData, c *common.DatabricksClient) error {
+			scope, principal, err := p.Unpack(d)
+			if err != nil {
+				return err
+			}
 			w, err := c.WorkspaceClient()
 			if err != nil {
 				return err
 			}
-			var getAclRequest workspace.GetAclRequest
-			common.DataToStructPointer(d, s, &getAclRequest)
-			v, err := w.Secrets.GetAcl(ctx, getAclRequest)
+			// var getAclRequest workspace.GetAclRequest
+			// common.DataToStructPointer(d, s, &getAclRequest)
+			v, err := w.Secrets.GetAcl(ctx, workspace.GetAclRequest{Scope: scope, Principal: principal})
 			if err != nil {
 				return err
 			}
-			return common.StructToData(v, s, d)
+			return d.Set("permission", v.Permission)
 		},
 		Delete: func(ctx context.Context, d *schema.ResourceData, c *common.DatabricksClient) error {
 			w, err := c.WorkspaceClient()
