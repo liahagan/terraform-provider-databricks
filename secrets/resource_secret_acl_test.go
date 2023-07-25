@@ -15,7 +15,7 @@ func TestResourceSecretACLRead(t *testing.T) {
 		Fixtures: []qa.HTTPFixture{
 			{
 				Method:   http.MethodGet,
-				Resource: "/api/2.0/secrets/acls/get?principal=&scope=",
+				Resource: "/api/2.0/secrets/acls/get?principal=something&scope=global",
 				Response: workspace.AclItem{
 					Principal:  "something",
 					Permission: "MANAGE",
@@ -43,7 +43,7 @@ func TestResourceSecretACLRead_NotFound(t *testing.T) {
 		Fixtures: []qa.HTTPFixture{
 			{
 				Method:   http.MethodGet,
-				Resource: "/api/2.0/secrets/acls/get?principal=&scope=",
+				Resource: "/api/2.0/secrets/acls/get?principal=something&scope=global",
 				Response: apierr.APIErrorBody{
 					ErrorCode: "NOT_FOUND",
 					Message:   "Item not found",
@@ -63,7 +63,7 @@ func TestResourceSecretACLRead_Error(t *testing.T) {
 		Fixtures: []qa.HTTPFixture{
 			{
 				Method:   http.MethodGet,
-				Resource: "/api/2.0/secrets/acls/get?principal=&scope=",
+				Resource: "/api/2.0/secrets/acls/get?principal=something&scope=global",
 				Response: apierr.APIErrorBody{
 					ErrorCode: "INVALID_REQUEST",
 					Message:   "Internal error happened",
@@ -93,7 +93,7 @@ func TestResourceSecretACLCreate(t *testing.T) {
 			},
 			{
 				Method:   http.MethodGet,
-				Resource: "/api/2.0/secrets/acls/get?principal=&scope=",
+				Resource: "/api/2.0/secrets/acls/get?principal=something&scope=global",
 				Response: workspace.AclItem{
 					Principal:  "something",
 					Permission: "MANAGE",
@@ -126,7 +126,7 @@ func TestResourceSecretACLCreate_ScopeWithSlash(t *testing.T) {
 			},
 			{
 				Method:   http.MethodGet,
-				Resource: "/api/2.0/secrets/acls/get?principal=&scope=",
+				Resource: "/api/2.0/secrets/acls/get?principal=something&scope=myapplication%2Fbranch",
 				Response: ACLItem{
 					Principal:  "something",
 					Permission: "CAN_MANAGE",
